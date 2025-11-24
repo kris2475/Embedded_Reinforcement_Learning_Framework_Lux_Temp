@@ -1,151 +1,124 @@
-💡 REINFORCEMENT LEARNING ADAPTIVE CLIMATE CONTROL UNIT (ACCU)
+# 💡 REINFORCEMENT LEARNING ADAPTIVE CLIMATE CONTROL UNIT (ACCU)
 
-Project Overview
+## Project Overview
 
-This project implements a Tabular Q-Learning agent designed to manage the climate (Illuminance and Temperature) within a confined space. The primary objective is to learn an energy-efficient policy that maintains user comfort while minimizing actuator activity.
+This project implements a Tabular Q-Learning agent designed to manage
+the climate (Illuminance and Temperature) within a confined space. The
+primary objective is to learn an energy-efficient policy that maintains
+user comfort while minimizing actuator activity.
 
-The solution is divided into a Python Simulation for rapid training and policy development, and an Embedded C++ Sketch for real-time execution of the learned policy on constrained hardware (e.g., Arduino/ESP32).
+The solution is divided into a **Python Simulation** for rapid training
+and policy development, and an **Embedded C++ Sketch** for real-time
+execution of the learned policy on constrained hardware (e.g.,
+Arduino/ESP32).
 
-🧠 Reinforcement Learning Space
+------------------------------------------------------------------------
 
-The State and Action spaces are strictly defined and mirrored between the simulation and embedded code to ensure policy portability.
+## 🧠 Reinforcement Learning Space
 
-1. State Space ($\mathbf{S}$): 9 Discrete States
+The State and Action spaces are strictly defined and mirrored between
+the simulation and embedded code to ensure policy portability.
 
-The environment is discretized into a 3x3 grid based on sensor readings from a BH1750 (Lux) and a BMP180 (Temperature).
+------------------------------------------------------------------------
 
-Environment Factor
+### 1. **State Space (𝑆): 9 Discrete States**
 
-Bin $\mathbf{0}$ (Low)
+The environment is discretized into a 3×3 grid based on sensor readings
+from a **BH1750 (Lux)** and a **BMP180 (Temperature)**.
 
-Bin $\mathbf{1}$ (Target)
+  ------------------------------------------------------------------------
+  Environment       Bin **0** (Low)  Bin **1** (Target)  Bin **2** (High)
+  Factor                                                 
+  ----------------- ---------------- ------------------- -----------------
+  Illuminance (Lux) ≤ 100 lx         101--499 lx         ≥ 500 lx
 
-Bin $\mathbf{2}$ (High)
+  Temperature (°C)  ≤ 18.0 °C        18.1--23.9 °C       ≥ 24.0 °C
+  ------------------------------------------------------------------------
 
-Illuminance (Lux)
+The **Target Comfort Zone** is **State 4 (S4)**: Medium Lux (Bin 1) and
+Comfort Temp (Bin 1).
 
-$\le 100 \text{ lx}$
+------------------------------------------------------------------------
 
-$101 - 499 \text{ lx}$
+### 2. **Action Space (𝐴): 5 Discrete Actions**
 
-$\ge 500 \text{ lx}$
+Actions correspond directly to actuator controls, with an explicit
+**energy cost** integrated into the reward function.
 
-Temperature ($\text{}^\circ\text{C}$)
+  Action ID   Action Name   Energy Cost / Reward
+  ----------- ------------- ----------------------------
+  0           LIGHT+        Negative Penalty (-0.05)
+  1           LIGHT-        Negative Penalty (-0.05)
+  2           TEMP+         Negative Penalty (-0.05)
+  3           TEMP-         Negative Penalty (-0.05)
+  4           IDLE          Small Reward Bonus (+0.01)
 
-$\le 18.0 \text{}^\circ\text{C}$
+------------------------------------------------------------------------
 
-$18.1 - 23.9 \text{}^\circ\text{C}$
+## 🛠️ Implementation Details
 
-$\ge 24.0 \text{}^\circ\text{C}$
+### Embedded C++ Sketch (`lux_rl_framework.ino`)
 
-The Target Comfort Zone is State 4 (S4): Medium Lux (Bin 1) and Comfort Temp (Bin 1).
+The sketch runs the Q-Learning loop, interacts with sensors (BH1750,
+BMP180), and outputs actuator commands via a serial proxy.
 
-2. Action Space ($\mathbf{A}$): 5 Discrete Actions
+#### Crucial Moment Logging
 
-Actions correspond directly to actuator controls, with an explicit Energy Cost integrated into the reward function.
+To support debugging on constrained hardware, the sketch logs:
 
-Action ID
+-   **Exploration**: Random actions taken under ε-Greedy\
+-   **Crucial Updates**: TD Error ≥ 1.0\
+-   **Policy Change**: Best action for a state changes
 
-Action Name
+------------------------------------------------------------------------
 
-Energy Cost / Reward
+## 🚀 Policy Transfer
 
-0
+The trained Q-Table from the Python simulation is **exported and
+hardcoded** into the C++ sketch.\
+This allows the embedded system to immediately execute an optimized
+policy **without on-chip training**.
 
-LIGHT+
+------------------------------------------------------------------------
 
-Negative Reward Penalty (-0.05)
+## 📊 Simulation Results Summary
 
-1
+Simulation ran for **200 episodes** with:
 
-LIGHT-
+-   α = 0.1\
+-   γ = 0.9\
+-   ε = 0.3
 
-Negative Reward Penalty (-0.05)
+### Key Findings
 
-2
+  Metric                       Value
+  ---------------------------- -------
+  Total Episodes               200
+  Crucial Updates (TD ≥ 1.0)   20
+  Policy Changes               10
 
-TEMP+
+------------------------------------------------------------------------
 
-Negative Reward Penalty (-0.05)
+### Final Policy Analysis (State S4)
 
-3
+Goal: In the target comfort zone (S4), the agent should choose **IDLE**
+to save energy.
 
-TEMP-
+  State ID   Description                 Best Action (Learned)
+  ---------- --------------------------- -----------------------
+  S4         Medium Lux + Comfort Temp   **LIGHT+**
 
-Negative Reward Penalty (-0.05)
+### ❌ Conclusion: Energy Efficiency Failure
 
-4
+The agent still chooses **LIGHT+** instead of **IDLE**.\
+The reward bonus for IDLE (**+0.01**) was not strong enough to outweigh
+environmental drift effects.
 
-IDLE
+------------------------------------------------------------------------
 
-Small Reward Bonus (+0.01)
+## 🔧 Proposed Next Steps
 
-🛠️ Implementation Details
-
-Embedded C++ Sketch (lux_rl_framework.ino)
-
-The sketch runs the Q-Learning loop, interacts with physical sensors (BH1750, BMP180), and outputs actuator commands via a Serial proxy.
-
-Crucial Moment Logging:
-To aid debugging and analysis on constrained hardware, the sketch implements logging for significant events:
-
-Exploration: Random actions taken under the $\epsilon$-Greedy strategy.
-
-Crucial Update: Q-Table updates where the Temporal Difference (TD) Error magnitude $\ge 1.0$, indicating a high-impact learning event.
-
-Policy Change: When an update causes the "best" action for a given state to switch.
-
-Policy Transfer
-
-In deployment, the Q-Table generated by the Python simulation is extracted and hardcoded into the C++ sketch, allowing the embedded system to immediately execute the trained, optimized policy without the need for slow, on-chip training.
-
-📊 Simulation Results Summary
-
-The Python simulation ran for 200 episodes using $\alpha=0.1$, $\gamma=0.9$, and $\epsilon=0.3$.
-
-Key Findings
-
-Metric
-
-Value
-
-Total Episodes
-
-200
-
-Crucial Updates (TD Error $\ge 1.0$)
-
-20
-
-Policy Changes (Best Action Switch)
-
-10
-
-Final Policy Analysis (State S4)
-
-The primary goal of the reward structure was to train the agent to select the IDLE action when in the Target Comfort Zone (S4), thereby maximizing energy efficiency.
-
-State ID
-
-State Description
-
-Best Action (Learned Policy)
-
-S4
-
-Target Zone (Medium Lux, Comfort Temp)
-
-LIGHT+
-
-Conclusion on Energy Efficiency (S4 Failure):
-The agent's learned policy for the target comfort state (S4) is LIGHT+ instead of the desired IDLE. This outcome suggests that the current reward structure needs tuning. Specifically, the energy bonus for the IDLE action ($\mathbf{+0.01}$) was insufficient to overcome the potential long-term benefits or penalties associated with environmental drift, forcing the agent to continuously intervene with active, energy-consuming actions.
-
-Proposed Next Steps:
-
-Increase the IDLE reward bonus (e.g., to $+0.05$ or higher).
-
-Increase the penalty for active actions.
-
-Run the Python simulation for a greater number of episodes to ensure full convergence.
-
-Re-evaluate the environmental drift model in the simulation to better match real-world fluctuations.
+-   Increase IDLE reward bonus (e.g., **+0.05** or more)
+-   Increase penalties for active actions
+-   Run more episodes for better convergence
+-   Re-evaluate environmental drift model to match real-world conditions
