@@ -1,8 +1,8 @@
 # Embedded RL Air Quality Controller  
-### (XIAO ESP32S3 + CCS811)
+### (XIAO ESP32S3 + CCS811 — *CCS811 ONLY, NO OTHER SENSORS*)
 
-An embedded Reinforcement Learning (RL) system running entirely on the **Seeed XIAO ESP32S3 Sense**, paired with a **CCS811** gas sensor for eCO₂/TVOC monitoring.  
-The RL agent selects optimal environmental control actions—such as adjusting ventilation airflow—to proactively maintain indoor air quality in a more efficient, predictive manner than traditional rule-based systems.
+A fully embedded Reinforcement Learning (RL) air-quality controller running on the **Seeed XIAO ESP32S3 Sense**, using **only a CCS811** gas sensor.  
+The system monitors eCO₂ and TVOC levels and uses an on-device RL agent to choose optimal ventilation actions that maintain target air quality, reduce power usage, and adapt over time — without cloud connectivity or additional sensors.
 
 ---
 
@@ -21,44 +21,44 @@ The RL agent selects optimal environmental control actions—such as adjusting v
 
 ## 1. Project Overview
 
-This project showcases how a **trained Reinforcement Learning agent** can run on a **tiny microcontroller** such as the ESP32-S3 to perform intelligent, adaptive environmental control.  
-Whereas most embedded systems rely on simple thresholds (“if eCO₂ > X then turn fan on”), RL learns a **policy** that can account for dynamic trends and subtle relationships, such as:
+This project demonstrates how a **Reinforcement Learning (RL) agent** can run directly on a **tiny embedded microcontroller**, using only a CCS811 air-quality sensor as input.  
+The goal is to build a **self-learning, autonomous ventilation controller** that improves air quality while minimising power consumption.
 
-- gradual changes in air quality  
-- temperature & humidity influence on CO₂ readings  
-- daily patterns or usage behaviour  
-- energy-saving trade-offs  
-- actuator wear or inefficiency  
-- context from previous states  
+With **no secondary sensors**, the system relies entirely on:
 
-The system becomes **predictive**, **adaptive**, and **energy-efficient**, even within the constraints of a low-power embedded platform.
+- CCS811 **eCO₂** readings  
+- CCS811 **TVOC** readings  
+- Optional time/context derived internally  
 
-This framework is suitable for smart ventilation, micro-climate control, appliance optimisation, and ultra-low-power intelligent sensing applications.
+Despite lacking temperature/humidity compensation hardware, the RL agent learns relationships between CCS811 output patterns and actuator outcomes over time, enabling smarter behaviour than simple threshold logic.
+
+This provides a minimal, low-component-count, ultra-efficient embedded AI system.
 
 ---
 
 ## 2. Hardware Requirements
 
-Built around the **Seeed XIAO ESP32S3 Sense**.
+Built around the **Seeed XIAO ESP32S3 Sense** with **CCS811 only**.
 
 | Component | Function | Pins Used | Notes |
 |----------|----------|-----------|-------|
-| **Microcontroller** | Seeed XIAO ESP32S3 Sense | — | Small footprint, dual-core, onboard sensors |
-| **Air Quality Sensor** | CCS811 (eCO₂/TVOC) | I2C → SDA (6), SCL (5) | Monitors gas levels with compensation support |
-| **Environmental Sensor** | BME280 or SHT30 | I2C → SDA (6), SCL (5) | Provides Temp/Humidity for CCS811 compensation |
-| **Actuator** | Relay / MOSFET / Fan driver | Digital/PWM 7, 8 | Controls ventilation or airflow |
+| **Seeed XIAO ESP32S3 Sense** | RL inference + actuator control | — | Small, powerful, ideal for TinyML |
+| **CCS811 eCO₂/TVOC Sensor** | Gas sensor (PRIMARY SENSOR) | SDA (6), SCL (5) | Only sensor used |
+| **Actuator** | Fan / relay / vent controller | Digital/PWM (e.g., 7, 8) | Controlled by RL agent |
+
+No additional temp/humidity sensor is used.
 
 ---
 
 ## 3. Software & Dependencies
 
-Install the following Arduino libraries:
+Install in Arduino IDE:
 
 - `Wire.h` — I²C communication  
-- `Adafruit_CCS811` — CCS811 driver  
-- `Adafruit_Sensor` + `BME280` / `SHT30` — optional but recommended  
-- **TensorFlow Lite for Microcontrollers** — required for real RL inference  
-- `run_rl_agent()` manages inference (a placeholder model is included)
+- `Adafruit_CCS811` — CCS811 hardware driver  
+- **TensorFlow Lite for Microcontrollers** (TFLM) — for running RL model inference  
+
+`run_rl_agent()` performs inference or placeholder logic.
 
 ---
 
@@ -66,33 +66,45 @@ Install the following Arduino libraries:
 
 ### State Vector
 
-The RL agent operates on a **5-element state vector**:
+Because ONLY the CCS811 is present, the state vector is simplified:
 
-STATE_VECTOR_SIZE = 5
+STATE_VECTOR_SIZE = 3
 
+yaml
+Copy code
 
-| Index | Parameter | Unit | Meaning |
+| Index | Parameter | Unit | Purpose |
 |-------|-----------|------|---------|
-| 0 | eCO₂ | ppm | Primary indicator of air quality |
-| 1 | TVOC | ppb | VOC measurement |
-| 2 | Temperature | °C | Compensation + environment context |
-| 3 | Humidity | %RH | Compensation + environment context |
-| 4 | Time Since Boot | Min | Temporal context for long-term behaviour |
+| 0 | eCO₂ | ppm | Primary IAQ metric |
+| 1 | TVOC | ppb | Secondary IAQ metric |
+| 2 | Time Since Boot | Minutes | Learned context (optional) |
+
+The RL model learns trends even without temperature/humidity compensation, because:
+
+- CCS811 readings drift with environment  
+- RL adapts to patterns over time  
+- Actions influence airflow and therefore sensor behaviour  
+
+This yields a surprisingly effective control loop in minimal configurations.
 
 ---
 
 ### Action Space
 
-The system defines **3 discrete actions**:
+The RL agent selects from **3 discrete actions**:
 
 ACTION_SPACE_SIZE = 3
 
+yaml
+Copy code
 
 | Action ID | Description | Effect |
 |-----------|-------------|--------|
-| **0** | Do Nothing | Fan off, conserve energy |
-| **1** | Fan Low | PWM ≈ 30% |
-| **2** | Fan High | PWM ≈ 80% |
+| **0** | Do Nothing | Fan/actuator off |
+| **1** | Low Ventilation | PWM ~30% |
+| **2** | High Ventilation | PWM ~80% |
+
+The agent’s goal is to keep eCO₂/TVOC within acceptable levels using the **least amount of energy**.
 
 ---
 
@@ -100,65 +112,59 @@ ACTION_SPACE_SIZE = 3
 
 `run_rl_agent(float* current_state)` performs:
 
-1. **State normalisation**  
-2. **TFLite Micro interpreter execution**  
-3. **Q-value extraction**  
-4. **Best action selection**  
+1. Normalising the 3-element state  
+2. Running TFLite Micro inference  
+3. Returning the chosen action  
 
-The provided example includes **simple rule-based logic**—replace this with your TensorFlow Lite RL model for full deployment.
+Until a model is trained, placeholder logic may be used.
 
 ---
 
 ## 5. Setup and Wiring
 
-### I2C Wiring
+### I²C Connections (CCS811 Only)
 
-Both sensors share the same I²C bus:
-
-| XIAO Pin | Signal | Connect To |
+| XIAO Pin | Signal | CCS811 Pin |
 |----------|--------|-------------|
-| 6 | SDA | CCS811 SDA |
-| 5 | SCL | CCS811 SCL |
-| 3.3V | VCC | CCS811 VCC |
-| GND | GND | CCS811 GND |
+| 6 | SDA | SDA |
+| 5 | SCL | SCL |
+| 3.3V | VCC | VCC |
+| GND | Ground | GND |
 
-### Actuator Output
+### Actuator Wiring
 
-Controlled in `execute_action()` using PWM:
+Typical airflow actuator (fan via MOSFET or relay):
 
-| Action | PWM Output | Behaviour |
-|--------|------------|-----------|
-| 0 | 0/255 | Fan off |
-| 1 | 77/255 | Low speed |
-| 2 | 200/255 | High speed |
+- PWM pin → MOSFET gate  
+- Fan → MOSFET drain  
+- Flyback diode (if inductive load)  
+
+Control is implemented in `execute_action()`.
 
 ---
 
 ## 6. Operation Flow
 
-### Setup Phase
-- Initialise I²C  
-- Start CCS811 and optional Temp/Humidity sensor  
-- Wait ~20s warm-up time  
+### **Startup**
+- Initialise I²C and CCS811  
+- Sensor warm-up (~20 seconds mandatory)  
+- RL agent enters active mode  
 
-### Loop (every 10 seconds)
-1. Read eCO₂, TVOC, Temp, Humidity  
-2. Construct the **5-element state vector**  
-3. Evaluate RL model:  
+### **Main Loop (10-second cycle)**
+
+1. Read eCO₂ + TVOC from CCS811  
+2. Construct 3-element state vector  
+3. Call RL inference:  
    ```cpp
    int action = run_rl_agent(state_vector);
+Apply action via PWM / GPIO
 
-Apply the action:
+Log all values through Serial
 
-execute_action(action);
+This structure supports:
 
+On-device RL
 
-Output readings + action over Serial for monitoring or dataset collection
+Offline RL dataset generation
 
-This loop is suitable for:
-
-closed-loop control
-
-offline RL training data generation
-
-testing new RL architectures
+Live environment control
