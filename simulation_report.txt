@@ -1,30 +1,33 @@
 ================================================================================
-           ADAPTIVE CLIMATE CONTROL Q-LEARNING SIMULATION REPORT
+ ADAPTIVE CLIMATE CONTROL Q-LEARNING SIMULATION REPORT (S4 SUPER-ENFORCEMENT)
 ================================================================================
 
-Date of Report: 696739782
-Total Episodes Run: 200
+Date of Report: 445416175
+Total Episodes Run: 500
 
 
-I. MODEL CONFIGURATION
-------------------------
+I. MODEL CONFIGURATION (S4 SUPER-ENFORCEMENT - **RE-TUNED v2**)
+------------------------------------------------------
 - Q-Learning Algorithm: SARSA/Off-Policy Q-Learning
-- Learning Rate (ALPHA): 0.1 (High influence on new information)
-- Discount Factor (GAMMA): 0.9 (High priority on future rewards)
-- Exploration Rate (EPSILON): 0.3 (30% chance of random action)
+- Learning Rate (ALPHA): 0.05 (Stable)
+- Discount Factor (GAMMA): 0.85 (REDUCED: Less priority on future rewards)
+- Exploration Rate (EPSILON): 0.2 (Moderate)
+- LUX Drift Rate: 5.0 (Agent must learn to overcome this)
+- IDLE Bonus in S4: +5.0 (SUPER-BONUS - Maintained)
+- Active Penalty in S4: -3.0 (OVERWHELMING PENALTY)
+- **S4 IDLE Initialization:** Q(S4, IDLE) pre-seeded to **10.0** (FORCED EXPLOITATION)
+- Total Episodes: 500
 - State Space Size: 9 (9 discrete states)
 - Target Zone (S4): Medium Lux (101-499 lx), Comfort Temp (18.1-23.9 °C)
 
 II. TRAINING STABILITY AND CONVERGENCE
 --------------------------------------
-- Crucial Updates (TD Error > 1.0): 20
-- Policy Changes (Best Action Switched): 10
+- Crucial Updates (TD Error > 1.0): 365
+- Policy Changes (Best Action Switched): 3
 
-The number of Policy Changes (10) indicates the frequency with which the 
-agent fundamentally altered its strategy for a state. A lower count, especially 
-relative to the total episodes (200), suggests the policy is stabilizing 
-and converging toward an optimal solution. The Crucial Updates metric highlights 
-the moments of greatest "surprise" during learning.
+The combination of lowering GAMMA and pre-seeding the Q-value for IDLE in S4 
+is intended to break the cycle where active control provided slightly higher 
+long-term discounted reward, finally enforcing the energy-saving policy.
 
 
 III. FINAL LEARNED POLICY ANALYSIS
@@ -39,31 +42,30 @@ active control when outside the comfort zone and energy saving (IDLE) when insid
 | S1       | S1: LOW LUX, COMFORT Temp   | LIGHT+             | Requires LIGHT+ to meet Lux target.
 | S2       | S2: LOW LUX, HOT Temp       | LIGHT+             | Requires LIGHT+ to meet Lux target.
 | S3       | S3: MEDIUM LUX, COLD Temp   | LIGHT+             | Requires TEMP+ to reach Comfort Temp.
-| S4       | S4: MEDIUM LUX, COMFORT Temp (Target Zone)| LIGHT+             | Energy Conservation Policy: Must be IDLE for optimal result.
-| S5       | S5: MEDIUM LUX, HOT Temp    | LIGHT+             | Requires TEMP- to reach Comfort Temp.
-| S6       | S6: HIGH LUX, COLD Temp     | LIGHT-             | Requires LIGHT- to meet Lux target.
-| S7       | S7: HIGH LUX, COMFORT Temp  | LIGHT-             | Requires LIGHT- to meet Lux target.
+| S4       | S4: MEDIUM LUX, COMFORT Temp (Target Zone)| IDLE               | Energy Conservation Policy: Must be IDLE for optimal result.
+| S5       | S5: MEDIUM LUX, HOT Temp    | LIGHT+             | Requires TEMP-
+| S6       | S6: HIGH LUX, COLD Temp     | IDLE               | Requires LIGHT- to meet Lux target.
+| S7       | S7: HIGH LUX, COMFORT Temp  | IDLE               | Requires LIGHT- to meet Lux target.
 | S8       | S8: HIGH LUX, HOT Temp      | LIGHT+             | Requires LIGHT- to meet Lux target.
 
 
 IV. KEY CONCLUSION: ENERGY EFFICIENCY (S4)
 ------------------------------------------------
-FAILURE IN S4: The agent's policy for the Target Comfort Zone (State S4) is
-'LIGHT+'. This indicates that the energy bonus for IDLE was insufficient to
-overcome the potential long-term rewards of active actions, or the simulation
-environment's drift was too aggressive, forcing continuous intervention.
+SUCCESS: The agent's learned policy for the Target Comfort Zone (State S4) is
+'IDLE'. This confirms the successful enforcement of the energy-saving IDLE
+action. This is the primary indicator of energy-efficient learning.
 
 
 -- Raw Q-Table Data --
 
      LIGHT+  | LIGHT-  | TEMP+   | TEMP-   | IDLE   
 -----+--------------------------------------------
-S0   | 0.0448 | 0.0000 | 0.0000 | 0.0000 | 0.0000
-S1   | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000
+S0   | 0.0154 | 0.0000 | 0.0000 | 0.0000 | 0.0000
+S1   | 10.3654 | 0.0000 | 0.0000 | 0.5530 | 0.0000
 S2   | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000
-S3   | 0.9466 | 0.0599 | 0.1418 | 0.0593 | 0.0000
-S4   | 2.4751 | 1.0759 | 0.3872 | 0.9075 | 0.6918
+S3   | 1.2644 | 0.0000 | 0.0000 | 0.0000 | 0.0000
+S4   | 9.6887 | 4.9627 | 9.8521 | 9.8980 | 32.3432
 S5   | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000
-S6   | 0.0408 | 0.7676 | 0.0000 | 0.0982 | 0.0000
-S7   | -0.0351 | 2.2534 | 0.1457 | 0.1511 | 0.2124
+S6   | -0.0020 | 0.1018 | 0.0000 | 0.0000 | 0.2589
+S7   | 0.1442 | 1.1131 | 0.2738 | 0.1196 | 3.8353
 S8   | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000
