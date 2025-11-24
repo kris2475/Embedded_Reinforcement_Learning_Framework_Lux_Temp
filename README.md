@@ -1,141 +1,161 @@
 # 💡 REINFORCEMENT LEARNING ADAPTIVE CLIMATE CONTROL UNIT (ACCU)
 
-## ❗ Embedded Reinforcement Learning: Why Being **IDLE** Is So Hard to Learn!
+## Embedded Reinforcement Learning: Why Being *IDLE* Is So Difficult to Learn
 
-One of the most important discoveries in this project is how
-**surprisingly difficult** it is for a reinforcement learning
-agent---especially on embedded hardware---to learn that sometimes the
-best action is to **do nothing**.
+One of the most revealing findings in this project was discovering how
+challenging it is for a reinforcement learning (RL) agent---particularly
+one running on constrained embedded hardware---to learn that the most
+efficient action is sometimes to **do nothing at all**.
 
-In this ACCU system, the goal was energy efficiency:\
-- Penalize all active actions (LIGHT+, TEMP+)\
-- Reward the IDLE action when in the comfort zone (State S4)
+In this Adaptive Climate Control Unit (ACCU), the design intention was
+clear:
 
-### 🧠 The Unexpected Result
+-   **Penalise** every active intervention (LIGHT+, LIGHT--, TEMP+,
+    TEMP--)\
+-   **Reward** the *IDLE* action whenever the environment was already
+    within the comfort zone (State S4)
 
-After 200 episodes of training, the agent mastered climate
-control---**except for the most important part: energy saving.**
+This should, in theory, encourage the agent to conserve energy by
+remaining idle whenever the environment is ideal.
 
-In the optimal comfort zone (**State S4**), the learned policy was:
+------------------------------------------------------------------------
 
-👉 **LIGHT+**\
-❌ Not the desired\
-👉 **IDLE**
+## 🧠 The Unexpected Outcome
 
-This is a powerful reinforcement learning insight:
+After 200 training episodes, the agent learned to manage temperature and
+lighting effectively---yet failed to learn the key behaviour: **energy
+efficiency**.
 
-> The long-term cost of environmental drift, combined with too small of
-> a reward for saving energy, makes the agent prefer constant
-> micro‑adjustments over sitting still---even though IDLE should be
-> "best" in theory.
+Instead of selecting **IDLE** in the comfort zone (State S4), the agent
+consistently selected:
 
-This happens frequently in resource‑limited environments like IoT and
-embedded systems.
+➡️ **LIGHT+**\
+❌ Not the intended action.
 
-### 🛠️ Next Steps to Fix the Policy
+This demonstrates an important RL principle:
 
-To converge on true energy‑efficient behavior:
+> When the long-term cost of environmental drift outweighs the immediate
+> reward of staying idle, the agent will prefer continuous, small
+> corrective actions---even if they consume more energy.
 
--   **Increase IDLE reward** (e.g., +0.05 or more)\
--   **Increase penalties** for actuator actions\
--   Re-run training with more episodes\
--   Improve the environmental drift model
+This behaviour is common in RL systems deployed in real-world or
+resource-constrained environments such as IoT devices and embedded
+controllers.
 
-If you've struggled with agents preferring "safe but costly" actions
-over efficient ones---this is exactly that phenomenon.
+------------------------------------------------------------------------
+
+# 🔧 Recommended Next Steps
+
+To align the learned policy with the desired energy‑efficient behaviour,
+several adjustments are recommended:
+
+### **1. Increase the Reward for IDLE**
+
+Make energy-saving behaviour significantly more valuable. - Suggested
+increase: **from +0.01 to +0.05** or higher\
+- This helps the agent recognise that "doing nothing" is the optimal
+choice in stable conditions.
+
+### **2. Increase Penalties for Active Actions**
+
+Reflect real-world energy costs more clearly. - Suggested penalties:
+**--0.1 or stronger**\
+- Encourages the agent to avoid unnecessary adjustments.
+
+### **3. Extend Training Duration**
+
+200 episodes may not be sufficient for full convergence. - Consider
+**500--2000 episodes**
+
+### **4. Refine Environmental Drift Modelling**
+
+Excessive drift pressure forces the agent into constant
+micro‑adjustments. - Reduce drift rate\
+- Add realistic noise patterns\
+- Match sensor characteristics more closely
+
+### **5. Consider Reward Shaping or Potential-Based Methods**
+
+Encourage long-term efficient behaviour, not just per-step efficiency. -
+Example: reward for remaining in the comfort zone over time
+
+### **6. Targeted Training for S4**
+
+Train the agent specifically on the comfort zone with a static
+environment to lock in the correct IDLE behaviour before full dynamic
+training.
 
 ------------------------------------------------------------------------
 
 ## Project Overview
 
 This project implements a Tabular Q-Learning agent designed to manage
-the climate (Illuminance and Temperature) within a confined space. The
-primary objective is to learn an energy-efficient policy that maintains
-user comfort while minimizing actuator activity.
+illuminance and temperature within a confined environment. The goal is
+to learn an energy-efficient policy that maintains user comfort while
+minimising actuator activity.
 
-The solution is divided into a **Python Simulation** for rapid training
-and policy development, and an **Embedded C++ Sketch** for real-time
-execution of the learned policy on constrained hardware (e.g.,
-Arduino/ESP32).
-
-------------------------------------------------------------------------
-
-## 🧠 Reinforcement Learning Space
-
-The State and Action spaces are strictly defined and mirrored between
-the simulation and embedded code to ensure policy portability.
+The solution consists of a **Python simulation** for training and a
+corresponding **Embedded C++ sketch** for execution on hardware such as
+Arduino or ESP32 boards.
 
 ------------------------------------------------------------------------
 
-### 1. **State Space (𝑆): 9 Discrete States**
+## Reinforcement Learning Space
 
-The environment is discretized into a 3×3 grid based on sensor readings
-from a **BH1750 (Lux)** and a **BMP180 (Temperature)**.
+### 1. **State Space: 9 Discrete States**
 
-  ------------------------------------------------------------------------
-  Environment       Bin **0** (Low)  Bin **1** (Target)  Bin **2** (High)
-  Factor                                                 
-  ----------------- ---------------- ------------------- -----------------
-  Illuminance (Lux) ≤ 100 lx         101--499 lx         ≥ 500 lx
+The environment is discretised into a 3×3 grid based on:
 
-  Temperature (°C)  ≤ 18.0 °C        18.1--23.9 °C       ≥ 24.0 °C
-  ------------------------------------------------------------------------
+-   **BH1750** lux readings\
+-   **BMP180** temperature readings
 
-The **Target Comfort Zone** is **State 4 (S4)**: Medium Lux (Bin 1) and
-Comfort Temp (Bin 1).
+  Environment Factor   Bin 0 (Low)   Bin 1 (Target)   Bin 2 (High)
+  -------------------- ------------- ---------------- --------------
+  Illuminance (Lux)    ≤100 lx       101--499 lx      ≥500 lx
+  Temperature (°C)     ≤18.0 °C      18.1--23.9 °C    ≥24.0 °C
+
+**State 4 (S4)** is the Target Comfort Zone (Medium Lux + Comfort Temp).
 
 ------------------------------------------------------------------------
 
-### 2. **Action Space (𝐴): 5 Discrete Actions**
-
-Actions correspond directly to actuator controls, with an explicit
-**energy cost** integrated into the reward function.
+### 2. **Action Space: 5 Discrete Actions**
 
   Action ID   Action Name   Energy Cost / Reward
-  ----------- ------------- ----------------------------
-  0           LIGHT+        Negative Penalty (-0.05)
-  1           LIGHT-        Negative Penalty (-0.05)
-  2           TEMP+         Negative Penalty (-0.05)
-  3           TEMP-         Negative Penalty (-0.05)
-  4           IDLE          Small Reward Bonus (+0.01)
+  ----------- ------------- ----------------------
+  0           LIGHT+        --0.05
+  1           LIGHT--       --0.05
+  2           TEMP+         --0.05
+  3           TEMP--        --0.05
+  4           IDLE          +0.01
 
 ------------------------------------------------------------------------
 
-## 🛠️ Implementation Details
+## Implementation Details
 
 ### Embedded C++ Sketch (`lux_rl_framework.ino`)
 
-The sketch runs the Q-Learning loop, interacts with sensors (BH1750,
-BMP180), and outputs actuator commands via a serial proxy.
+The sketch runs the Q-Learning loop, reads sensors, and issues actuator
+commands.
 
-#### Crucial Moment Logging
-
-The sketch logs for debugging:
-
--   **Exploration** under ε-Greedy\
--   **Crucial Updates** (TD Error ≥ 1.0)\
--   **Policy Changes** when best action changes
+It logs: - Exploration events\
+- Crucial Q-table updates (TD error ≥ 1.0)\
+- Policy changes when the best action for a state shifts
 
 ------------------------------------------------------------------------
 
-## 🚀 Policy Transfer
+## Policy Transfer
 
-The trained Q-Table from the Python simulation is **exported and
-hardcoded** into the C++ sketch.\
-This allows the embedded system to immediately execute an optimized
-policy **without on-chip training**.
+The trained Q-table from the Python simulation is exported and embedded
+directly into the C++ firmware, enabling immediate optimal behaviour
+without the need for on-device training.
 
 ------------------------------------------------------------------------
 
-## 📊 Simulation Results Summary
+## Simulation Results
 
-Simulation ran for **200 episodes** with:
-
--   α = 0.1\
--   γ = 0.9\
--   ε = 0.3
-
-### Key Findings
+Training ran for 200 episodes with: - α = 0.1\
+- γ = 0.9\
+- ε = 0.3
 
   Metric                       Value
   ---------------------------- -------
@@ -143,33 +163,11 @@ Simulation ran for **200 episodes** with:
   Crucial Updates (TD ≥ 1.0)   20
   Policy Changes               10
 
-------------------------------------------------------------------------
+### Final Policy for S4
 
-### Final Policy Analysis (State S4)
+  State   Description           Learned Best Action
+  ------- --------------------- ---------------------
+  S4      Target comfort zone   **LIGHT+**
 
-Goal: In the target comfort zone (S4), the agent should choose **IDLE**
-to save energy.
+This indicates the need for reward restructuring.
 
-  State ID   Description                 Best Action (Learned)
-  ---------- --------------------------- -----------------------
-  S4         Medium Lux + Comfort Temp   **LIGHT+**
-
-### ❌ Conclusion: Energy Efficiency Failure
-
-The reward for IDLE (+0.01) wasn't strong enough to overcome long-term
-drift and risk avoidance.\
-Thus, the learned behavior violates the intended energy-saving design.
-
-------------------------------------------------------------------------
-
-## 🔧 Proposed Next Steps
-
--   Increase IDLE reward bonus (e.g., **+0.05** or more)\
--   Increase penalties for active actions\
--   Run more episodes for better convergence\
--   Improve environment drift model to match real conditions
-
-------------------------------------------------------------------------
-
-#Qlearning #AI #EmbeddedAI #EnergyEfficiency #IoTDevelopment
-#DataScience #MachineLearning #Tech
