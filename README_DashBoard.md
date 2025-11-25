@@ -1,104 +1,142 @@
-# 💡 ESP32 Adaptive Climate Control Unit (ACCU) with Q-Learning
+# 💡 ESP32 EmbeddedRL Illuminance Control Unit (ICCU) with Q-Learning  
+*Illuminance as a Proxy for Printed Heater Control in RVs*
 
 ## Project Summary
 
-This project implements a complete **Q-Learning** framework on an **ESP32 microcontroller** to create an Adaptive Climate Control Unit (ACCU). The primary goal is to train an autonomous agent to maintain optimal environmental conditions—specifically **Target Lux (Illuminance)** and **Target Temperature**—while strategically minimizing the energy cost associated with taking actions.
+This project implements a complete **Q-Learning** framework on an **ESP32 microcontroller** to create an Illuminance Control Unit (ICCU). The system maintains a **Target Illuminance (300 Lux)** while minimizing energy usage through learned control actions.
 
-The system features a **real-time, single-page web dashboard** embedded directly on the ESP32, providing crucial visualization of the Q-Table, state changes, and learning dynamics.
+Illuminance is used here as a **clean and responsive proxy** for real environmental control. The exact same Embedded RL architecture applies directly to:
+
+- Printed RV heaters  
+- Underfloor heating  
+- Any PWM-driven energy system requiring adaptive control  
+
+A fully embedded, single-page dashboard visualizes Q-Table evolution, actions, rewards, and states in real time.
 
 ---
 
 ## 1. System Overview and Core Concept
 
-The system utilizes **Reinforcement Learning (RL)** to solve a classic control problem.
+The agent solves a classic embedded control problem:
+
+> **Maintain a target (300 Lux) with the minimum possible energy cost.**  
+> When applied to RV heating, the same RL logic maintains a temperature target using printed heater PWM control.
+
+### System Components
 
 | Component | Role | Details |
-| :--- | :--- | :--- |
-| **Goal** | Optimal Environment | Maintain **300 Lux** and **21°C**. |
-| **Algorithm** | Q-Learning | A model-free RL algorithm used to learn the **optimal policy** (best action per state). |
-| **Hardware** | ESP32 | Runs the entire RL algorithm, manages Wi-Fi connectivity, and hosts the web server. |
-| **Sensors** | Simulated (BH1750/BMP180) | Provide continuous measurements of Lux and Temperature, defining the environment's state. |
-| **Actuators** | Simulated Actions | A small set of predefined actions (e.g., `LIGHT+`, `TEMP-`) used to influence the environment. |
-
-### Q-Learning Cycle (Every 5 Seconds)
-
-The agent operates in a continuous loop, sensing the environment, calculating a reward, updating its knowledge, and executing a new action.
-
-| Step | Detail |
-| :--- | :--- |
-| **Sense (S)** | Read continuous Lux and Temp. **Discretize** these values into a single **State Index** ($S_0$ to $S_8$). |
-| **Reward (R)** | Calculate the reward based on proximity to targets, applying a penalty for the action's simulated **energy cost**. |
-| **Learn (Q-Update)** | Update the Q-Table entry for the previous $(S, A)$ pair using the **Temporal Difference (TD) error** equation. |
-| **Action (A')** | Select the next action $A'$ using the **Epsilon-Greedy** strategy (mostly exploit, occasionally explore). |
-| **Execute** | Apply the chosen action (simulated actuator control). |
-
-### The Q-Learning Equation
-
-The core of the learning process is the Q-Value update equation:
-
-$$Q(S, A) \leftarrow Q(S, A) + \alpha [R + \gamma \max_{A'} Q(S', A') - Q(S, A)]$$
+|----------|------|---------|
+| **Goal** | Maintain 300 Lux | Illuminance is the proxy target; identical RL architecture works for heaters. |
+| **Algorithm** | Q-Learning | Model-free RL; learns optimal actions per state. |
+| **Hardware** | ESP32 | Runs RL loop + web dashboard. |
+| **Sensor** | Simulated BH1750 | Continuous illuminance readings. |
+| **Actuators** | Simulated PWM | Equivalent to heater PWM in RV systems. |
 
 ---
 
-## 2. Dashboard and Streaming Fix
+## 2. Q-Learning Cycle (Every 5 Seconds)
 
-The dashboard is a critical visualization tool, delivered as a large, single-file HTML/CSS/JavaScript application embedded in the Arduino sketch's **Flash Memory (`PROGMEM`)**.
+Each iteration includes sensing, rewarding, updating the Q-Table, selecting the next action, and executing it.
 
-### Crucial Technical Fix: Robust HTML Streaming
+| Step | Description |
+|------|-------------|
+| **Sense (S)** | Read current Lux and discretize into state index (`S0`–`S8`). |
+| **Reward (R)** | Reward = closeness to 300 Lux − energy cost of action. |
+| **Learn** | Update Q(S,A) using TD error. |
+| **Select (A')** | Epsilon-greedy: exploit the best action or explore. |
+| **Execute** | Apply PWM action (`LIGHT+`, `LIGHT-`, `IDLE`). |
 
-A significant challenge in hosting large files from an ESP32 is memory allocation. Attempting to buffer the entire HTML file in RAM before sending often leads to **memory allocation failures** or **watchdog timer resets** (the "still blank" issue).
+### Q-Learning Equation
 
-The final sketch implements a robust, low-level solution:
-
-* **`sendLargeHtmlFromProgmem()`:** This custom function directly reads the HTML content from Flash memory.
-* **Chunked Sending:** It sends the file in safe, small **512-byte chunks** sequentially. This bypasses the memory-heavy internal buffers of the high-level web server functions, ensuring stability.
-
-> **Expected Behavior:** When a browser connects, the Serial Monitor should confirm the successful transmission with the message: `HTML stream complete. Connection closed.`
+```
+Q(S, A) ← Q(S, A) + α [ R + γ * max(Q(S', A')) – Q(S, A) ]
+```
 
 ---
 
-## 3. Interpreting the Dashboard
+## 3. Dashboard & Flash Streaming
 
-The web dashboard is designed to provide immediate, actionable insight into the agent's real-time performance and learning.
+The dashboard is a single-page HTML/CSS/JS file stored in **PROGMEM**. Large files typically fail on ESP32 due to memory limits.
 
-### A. Sensor Data & Status
+### Memory-Safe Streaming Solution
 
-| Element | Interpretation |
-| :--- | :--- |
-| **Lux / Temp Value** | The current, raw sensor readings (state input). |
-| **Gauges** | Visual representation against the target. The center line is the target (300 Lux / 21°C). |
-| **Reward Value** | The immediate reward received in the last step. Range: -1.0 to +1.0. Higher values indicate better performance relative to energy cost. |
-| **State Index (S0-S8)** | The discrete environmental state the system currently recognizes. |
-| **Action Taken** | The command chosen by the RL agent in the last step (e.g., `LIGHT+`, `TEMP-`). |
+- **`sendLargeHtmlFromProgmem()`** streams HTML directly from Flash.  
+- Sends data in **512-byte chunks** to avoid RAM exhaustion.  
+- Prevents watchdog resets and ensures stable delivery.
 
-### B. State Space Mapping (S0 to S8)
+**Expected Serial output:**
 
-The continuous sensor readings are **discretized** into 9 distinct states, formed by combining three bins for Lux and three bins for Temperature.
+```
+HTML stream complete. Connection closed.
+```
 
-| State Index (S) | Lux Bin | Temp Bin | Description |
-| :---: | :--- | :--- | :--- |
-| **S0** | Low (< 100) | Cold (< 18°C) | Environment is too dark and too cold. |
-| **S4** | Medium/Target (100-500) | Comfort/Target (18-24°C) | **Ideal State (Target)**. |
-| **S8** | High (> 500) | Hot (> 24°C) | Environment is too bright and too hot. |
+---
 
-### C. Q-Table Policy Heatmap (The Core of the Learning)
+## 4. Dashboard Interpretation
 
-This visualization reveals the agent's learned knowledge (the Policy).
+### A. Sensor & Status
 
-| Feature | Interpretation |
-| :--- | :--- |
-| **Rows** | Represent the 9 possible **States** ($S_0$ to $S_8$). |
-| **Columns** | Represent the 5 available **Actions** (`LIGHT+`, `LIGHT-`, `TEMP+`, `TEMP-`, `IDLE`). |
-| **Cell Value (Color)** | The **Q-Value**. This is the expected cumulative future reward if the agent takes the specific Action (column) while in the specific State (row). |
-| **Color Scale** | **Green** = High Positive Q-Value (Action is consistently good). **Red** = High Negative Q-Value (Action is consistently bad). |
-| **Blue Star (★)** | Marks the **Greedy Action**—the best-known action for that state, defining the current policy. |
-| **Active State** | The entire row corresponding to $S_{current}$ is highlighted with a pulsing blue outline. |
+| Element | Meaning |
+|---------|---------|
+| **Lux** | Raw illuminance reading (proxy for environment). |
+| **Gauge** | Shows deviation from the 300 Lux target. |
+| **Reward** | Range: `-1.0` to `+1.0`; higher = closer to target with less energy. |
+| **State Index (S0–S8)** | Discretized illuminance state. |
+| **Action** | RL selected action: `LIGHT+`, `LIGHT-`, `IDLE`. |
 
-### D. RL Log
+(*In RV heating, these map directly to PWM heater adjustments.*)
 
-The log provides a detailed narrative of the agent's decision-making and learning process.
+---
 
-* `"EXPLORE:"`: The agent deliberately chose a **random action** despite having a known best action (based on the Epsilon-Greedy strategy).
-* `"EXPLOIT:"`: The agent chose the action with the **highest known Q-value** (the Greedy action).
-* `"LEARN: ... [CRUCIAL UPDATE]"`: Indicates a large **TD Error**, meaning the observed reward was very surprising and led to a substantial update in the Q-Table.
-* `"LEARN: ... [POLICY CHANGE: XXX]"`: The most significant event. This means the update was large enough to change the **Greedy Action (★)** for a state, indicating the agent has truly learned a new, better policy.
+### B. State Space (S0–S8)
+
+| State | Lux Range | Meaning |
+|-------|-----------|---------|
+| **S0** | `< 50` | Very dark. |
+| **S4** | `250–350` | Target zone. |
+| **S8** | `> 600` | Over-bright environment. |
+
+These bins mirror the discretization approach for temperature states when controlling heaters.
+
+---
+
+### C. Q-Table Heatmap
+
+The Q-Table shows what the agent has learned.
+
+- **Rows:** States (`S0–S8`)  
+- **Columns:** Actions (`LIGHT+`, `LIGHT-`, `IDLE`)  
+- **Cell Value:** Expected cumulative reward  
+- **Green = Good**, **Red = Bad**  
+- **Blue Star (★):** Greedy (best) action  
+- **Highlighted Row:** Current state  
+
+---
+
+### D. RL Log Events
+
+- `EXPLORE:` — random exploratory action  
+- `EXPLOIT:` — greedy (highest Q-value) action  
+- `LEARN: [CRUCIAL UPDATE]` — large TD error; big Q-value change  
+- `LEARN: [POLICY CHANGE: XXX]` — greedy action changed → the agent learned a **new policy**
+
+---
+
+## Notes
+
+- Illuminance is a **training proxy** because it reacts instantly and is easy to simulate.  
+- The entire RL pipeline transfers directly to **printed heater control** in RVs.  
+- PWM actions, discretization, reward design, and policy learning remain identical.
+
+---
+
+## Future Extensions
+
+- Replace simulated sensors with BH1750 hardware  
+- Add heater PWM output for real RV testing  
+- Implement persistent Q-Table storage  
+- Add dynamic environmental disturbances (sunlight, door events)
+
+---
+
+
