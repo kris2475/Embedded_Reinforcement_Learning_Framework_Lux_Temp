@@ -57,8 +57,8 @@
 // --------------------------------------------------------
 // --- WIFI Configuration ---
 // --------------------------------------------------------
-const char* ssid = "SKYYRMR7"; 
-const char* password = "K2xWvDFZkuCh"; 
+const char* ssid = ""; 
+const char* password = ""; 
 
 WebServer server(80); // Web server on port 80
 
