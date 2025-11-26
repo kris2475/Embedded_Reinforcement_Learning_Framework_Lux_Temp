@@ -1,4 +1,4 @@
-# 💡 Embedded Reinforcement Learning Framework for Lux and Temperature Control
+# Embedded Reinforcement Learning Framework for Lux and Temperature Control
 
 This project presents a comprehensive **Embedded Reinforcement Learning (RL) Framework** designed to create energy-efficient and highly adaptive **Smart Building Automation Systems (SBAS)**. The framework’s core function is to deploy resource-optimized RL algorithms onto **constrained embedded systems** (e.g., low-power microcontrollers) to autonomously manage and optimize settings for key environmental variables: **Illuminance (Lux)** and **Temperature**.
 
@@ -6,11 +6,11 @@ The goal is to move beyond static control systems by enabling the embedded node 
 
 ---
 
-## 🏗️ Development Progress and Repository Structure
+## Development Progress and Repository Structure
 
 The repository is logically separated into a high-level **training environment** (`simulations`) and multiple, iterative **embedded deployment versions** (`ver1`, `ver2`, `ver3`). This structure clearly maps the progression from conceptual testing to highly optimized hardware implementation.
 
-### 1. ⚙️ `simulations`
+### 1. `simulations`
 
 This folder represents the **pre-deployment phase** where the Reinforcement Learning algorithms are developed and validated.
 
@@ -23,7 +23,7 @@ This folder represents the **pre-deployment phase** where the Reinforcement Lear
 
 ---
 
-### 2. ⚡ `ver1` (Initial Embedded Proof-of-Concept)
+### 2. `ver1` (Initial Embedded Proof-of-Concept)
 
 This marks the **first successful translation** of the framework's core logic into a deployable, resource-constrained environment.
 
@@ -36,7 +36,7 @@ This marks the **first successful translation** of the framework's core logic in
 
 ---
 
-### 3. 🚀 `ver2` (Optimization and Algorithm Refinement)
+### 3. `ver2` (Optimization and Algorithm Refinement)
 
 Building upon the functional foundation of `ver1`, this version focuses on improving efficiency and utilizing more sophisticated algorithms.
 
@@ -49,20 +49,21 @@ Building upon the functional foundation of `ver1`, this version focuses on impro
 
 ---
 
-### 4. ⭐ `ver3` (Feature Completion and Robust Deployment)
+### 4. `ver3` (Feature Completion and Robust Deployment)
 
 This iteration integrates all necessary components for a robust field deployment, aligning with typical SBAS requirements.
 
 * **Focus:** **System Robustness, Connectivity, and Power Management**. Preparing the framework for real-world, long-term operation.
 * **Content Focus:**
-    * **Power Management:** Integration of deep sleep modes and scheduling logic. This includes implementing the core functionality where a **PIR sensor wakes the node to take measurements**, but the **wireless transmission is handled by a separate wakeup module** (as per project constraints), ensuring energy efficiency.
+    * **Power Management:** Integration of deep sleep modes and scheduling logic. This includes implementing the core functionality where a **PIR sensor wakes the node to take measurements**, but the **wireless transmission is handled by a separate wakeup module**, ensuring energy efficiency.
     * **Wireless Communication:** Code for communication modules (e.g., Zigbee, Wi-Fi, or LoRa) to report status, receive setpoints, and enable over-the-air policy updates.
     * **Safety & Fallback:** Implementation of safety limits and non-RL fallback control policies to ensure system stability during sensor failure or unexpected environmental events.
 * **Progress Highlight:** Represents the **final, highly optimized framework** suitable for industrial prototyping, featuring adaptive RL control combined with essential low-power and networking capabilities.
 
 ---
 
-## 📋 Technology & Licensing
+## Technology & Licensing
 
 * **Core Languages:** C++ (Embedded), Python (Simulation)
 * **License:** The project is made available under the **Apache-2.0 License**.
+
