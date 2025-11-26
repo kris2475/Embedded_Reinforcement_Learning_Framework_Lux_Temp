@@ -73,12 +73,6 @@ The learning rate ($\alpha$) is calculated dynamically **utilising** the visitat
 
 $$\alpha_{\text{dynamic}} \leftarrow \frac{ALPHA\_START}{ALPHA\_START + N(s, a)}$$
 
-### 2. Dynamic Learning Rate ($\alpha$)
-
-The learning rate ($\alpha$) is calculated dynamically using the visitation count **$N(s, a)$** for each state-action pair, stored in the `N_table`.
-
-$$\alpha_{\text{dynamic}} \leftarrow \frac{\text{ALPHA\_START}}{\text{ALPHA\_START} + N(s, a)}$$
-
 * **Low $N$ (New States):** $\alpha$ remains high, allowing fast updates and quick adaptation to new conditions.
 * **High $N$ (Learned States):** $\alpha$ drops near zero, making the Q-values highly stable and preventing overshooting due to noise.
 
