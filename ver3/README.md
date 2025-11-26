@@ -66,6 +66,12 @@ The $\epsilon$ (Epsilon) value starts at $\epsilon=1.0$ (100% random exploration
 This ensures the agent:
 1.  **Explores** the environment thoroughly at the start to fill the Q-table.
 2.  **Exploits** the learned policy (takes the best action) most of the time after convergence, only taking a random action 5% of the time.
+3.  
+### 2. Dynamic Learning Rate ($\alpha$)
+
+The learning rate ($\alpha$) is calculated dynamically **utilising** the visitation count $N(s, a)$ for each state-action pair, stored in the `N_table`.
+
+$$\alpha_{\text{dynamic}} \leftarrow \frac{ALPHA\_START}{ALPHA\_START + N(s, a)}$$
 
 ### 2. Dynamic Learning Rate ($\alpha$)
 
