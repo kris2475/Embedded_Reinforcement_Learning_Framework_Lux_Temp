@@ -80,7 +80,7 @@ $$\alpha_{\text{dynamic}} \leftarrow \frac{\text{ALPHA\_START}}{\text{ALPHA\_STA
 
 ## 📈 Performance Analysis of the RALU Agent (Post-Convergence)
 
-The provided serial log data (Episodes 6517 to 6546) confirms that the RALU agent is operating in a **highly converged and stable state**, demonstrating the effectiveness of the V3.0 self-tuning and state-space refinements. 
+The provided serial log data (Episodes 6517 to 6546) confirms that the RALU agent is operating in a **highly converged and stable state**, demonstrating the effectiveness of the V3.0 self-tuning and state-space refinements.
 
 ### 1. High Stability and Optimal Policy
 
