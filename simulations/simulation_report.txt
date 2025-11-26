@@ -18,7 +18,7 @@ I. MODEL CONFIGURATION (S4 SUPER-ENFORCEMENT - **RE-TUNED v2**)
 - **S4 IDLE Initialization:** Q(S4, IDLE) pre-seeded to **10.0** (FORCED EXPLOITATION)
 - Total Episodes: 500
 - State Space Size: 9 (9 discrete states)
-- Target Zone (S4): Medium Lux (101-499 lx), Comfort Temp (18.1-23.9 °C)
+- Target Zone (S4): Medium Lux (101-499 lx), Comfort Temp (18.1-23.9 Â°C)
 
 II. TRAINING STABILITY AND CONVERGENCE
 --------------------------------------
