@@ -14,84 +14,63 @@ This folder represents the **pre-deployment phase**, where the Reinforcement Lea
 
 * **Purpose:** To provide a controlled, high-level environment (typically Python) for training robust RL agents before porting the resultant policy or inference code to the embedded C++ environment. The simulation environment acts as a crucial testbed for hyperparameter tuning.
 
-* **Content Focus:**
-  * **Environment Model:** Contains a Python implementation of the building physics, accurately simulating thermal and lighting dynamics, occupant behaviour (e.g., presence detection), and actuator responses (e.g., LED dimming curves, HVAC efficiency).
-  * **Agent Training Scripts:** Scripts for a variety of RL algorithms (for instance, tabular Q-Learning, SARSA, or scalable Deep Q-Network (DQN) implementations) used to explore and converge on optimal control policies under various seasonal and occupancy scenarios.
-  * **Validation Tools:** Includes plotting scripts, extensive logging handlers, and metrics calculations to quantitatively assess agent performance against baseline control systems (such as fixed-point PID controllers or heuristic-based methods), focusing on convergence speed, total energy consumption, and comfort compliance error.
+* **Content Focus (Future Work):**
+    * **Environment Model:** Contains a Python implementation of the building physics, accurately simulating thermal and lighting dynamics.
+    * **Agent Training Scripts:** Scripts for a variety of RL algorithms (e.g., Q-Learning, SARSA) to explore and converge on optimal control policies.
+    * **Validation Tools:** Includes plotting scripts, logging handlers, and metrics calculations to assess agent performance against baseline control systems.
 
-* **Key Outcome:** A proven, stable RL policy (either a Q-table or a set of learned network weights) ready for translation and efficient integration into the embedded C++ environment.
+* **Key Outcome:** A proven, stable RL policy ready for translation and efficient integration into the embedded C++ environment.
 
 ---
 
-## Current Status: Adaptive Q-Learning for Lux Control (The Core Implementation)
+## Current Implemented Status: Adaptive Q-Learning for Lux Control (`ver2`)
 
-The current working code, found in `Adaptive_Q_Learning_Agent_RL_Lighting_Control_Trainer_5_states.ino`, represents the successful completion of the basic single-variable control problem (Lux) and demonstrates the viability of the embedded RL approach.
+The currently implemented code is the **Adaptive Q-Learning Agent**, successfully addressing the single-variable Lux control problem on constrained hardware. This functionality is entirely contained within the `ver2` scope.
 
-### Implementation Details:
+### Implementation Details (Verifiable from Sketch):
 * **Target Hardware:** ESP32-S3 (or similar low-power MCU).
-* **Algorithm:** Tabular Q-Learning.
-* **State Space:** Highly discrete 5-state space defined by Lux ranges (e.g., S2 is the $250 - 350\text{ Lux}$ Target State).
+* **Algorithm:** Tabular Q-Learning (implemented with the standard update rule: $Q(s_t, a_t) \leftarrow Q(s_t, a_t) + \alpha \left[ r_{t+1} + \gamma \max_{a} Q(s_{t+1}, a) - Q(s_t, a_t) \right]$).
+* **State Space:** Highly discrete 5-state space defined by Lux ranges, centered around the target zone.
 * **Action Space (3 Actions):** `LIGHT+` (Increase PWM), `LIGHT-` (Decrease PWM), `IDLE` (Maintain current PWM).
-* **Key Feature:** Implements **Adaptive Exploration** ($\epsilon$-Decay) and **Adaptive Learning Rate** ($\alpha$-Decay) to accelerate convergence and stabilize the final policy.
+* **Key Feature:** Implements **Adaptive Exploration** ($\epsilon$-Decay) and **Adaptive Learning Rate** ($\alpha$-Decay) to accelerate convergence and stabilize the final policy (this is the key difference between `ver1` and `ver2`).
 
-### Performance Summary (Based on `rl_log_data.csv`):
-Analysis of the logs confirms that the agent successfully converged on a stable policy, achieving near-optimal rewards ($\approx 0.90$) by effectively balancing Lux target maintenance against energy cost. The adaptive parameters ensured a rapid transition from exploration ($\epsilon = 1.0$) to exploitation ($\epsilon = 0.05$).
+### Performance Summary (Verifiable from Log Data):
+Analysis of the provided log data confirms that the agent successfully converged on a stable policy, achieving near-optimal rewards ($\approx 0.90$) by effectively balancing Lux target maintenance against energy cost. The adaptive parameters ensured a rapid transition from exploration ($\epsilon = 1.0$) to exploitation ($\epsilon = 0.05$).
 
 ---
 
-### 2. `ver1` (Initial Embedded Proof-of-Concept)
+### 2. `ver1` (Initial Embedded Proof-of-Concept - Non-Adaptive Baseline)
 
-This marks the **first successful translation** of the framework's core learning logic into a deployable, resource-constrained environment.
+This version represents the necessary conceptual and implementation baseline **before** adaptive optimization.
 
-* **Focus:** Establishing the **basic infrastructure** and validating the fundamental feasibility of running a simplified, non-adaptive RL agent (specifically **Q-Learning for Lux control**) directly on the target low-power hardware (MCU). This prioritizes functional execution over efficiency.
+* **Focus:** Establishing the basic embedded Q-Learning infrastructure using **fixed** parameters.
 
-* **Content Focus:**
-  * **Basic RL Implementation:** Houses the C/C++ code for a simple tabular RL algorithm (Q-Learning) with a highly discretised state–action space, prioritizing computational simplicity and minimizing RAM usage.
-  * **Hardware Abstraction Layer (HAL):** Initial, minimal code for interfacing directly with physical sensors (I²C lux sensor) and low-level actuators (PWM dimmer controls).
-  * **Minimalist Codebase:** Emphasis on the core RL loop functionality (measurement, reward, update, action), with minimal memory optimisation or power-saving features.
+* **Content Focus (Conceptual Baseline):**
+    * **Basic RL Implementation:** Houses the C/C++ code for a simple tabular RL algorithm (Q-Learning) using a highly discretised state–action space and **fixed, non-decaying** $\epsilon$ and $\alpha$ values.
+    * **Hardware Abstraction Layer (HAL):** Minimal code for interfacing directly with physical sensors (Lux sensor) and low-level actuators (PWM dimmer controls).
 
-* **Progress Highlight:** Successful execution of the full learning loop on the microcontroller, demonstrating the node’s foundational ability to take real-time environmental measurements, compute temporal difference rewards, and update the Q-table or policy in real time, confirming the viability of the embedded RL approach.
+* **Progress Highlight:** Demonstrating the foundational ability to compute rewards and update the Q-table in real-time, providing the un-optimized comparison for `ver2`.
 
-### 3. `ver2` (Optimisation and Algorithm Refinement)
+### 3. `ver2` (Optimisation and Algorithm Refinement - Currently Implemented)
 
-Building upon the functional foundation of `ver1`, this version concentrates on improving computational efficiency, memory footprint, and employing more sophisticated algorithms to handle a wider operating range.
+This folder contains the complete, current working code for the embedded RL agent.
 
-* **Focus:** **Computational and memory optimisation**, specifically addressing the constraints identified in `ver1`. This phase implements the **Adaptive Q-Learning** features (e.g., the adaptive $\epsilon$ and $\alpha$ decay mechanisms seen in the current implementation) to speed up convergence and improve policy stability.
+* **Focus:** **Computational and memory optimisation** through the implementation of **Adaptive $\epsilon$ and $\alpha$ decay mechanisms**, specifically addressing the slow convergence and instability of the `ver1` baseline.
 
-* **Content Focus:**
-  * **Advanced RL Agent:** Implementation of the improved algorithm, potentially featuring **function approximation** (such as lightweight, single-layer neural networks, if using a more capable MCU) or a memory-efficient sparse Q-table structure, such as **optimised tile-coding**.
-  * **Optimisation Techniques:** Includes low-level memory optimisations (e.g., using fixed-point arithmetic instead of full floating-point operations), efficient data structures (e.g., hash maps for sparse Q-tables), and code profiling to reduce execution time.
-  * **Enhanced Measurement Logic:** Refinement of sensor reading and data-processing pipelines (e.g., filtering, sensor fusion) to improve both accuracy and execution speed of the state determination process.
+* **Content Focus (Implemented Sketch):**
+    * **Adaptive RL Agent:** Implementation of the **Adaptive Q-Learning** algorithm with dynamic, self-tuning $\epsilon$ and $\alpha$ decay.
+    * **Optimisation Techniques:** Focus on efficient table lookups and parameter management suitable for constrained environments.
+    * **Enhanced Measurement Logic:** Refinement of sensor reading and data-processing pipelines for state determination.
 
-* **Progress Highlight:** Demonstrates significantly **faster convergence** and the ability to manage a **larger, continuous state space** than `ver1`, leading directly to improved control performance, reduced control oscillation, and enhanced energy savings.
+* **Progress Highlight:** Demonstrates significantly **faster convergence** and a highly stable final policy compared to `ver1`, validating the use of adaptive parameters for embedded systems.
 
-### 4. `ver3` (Feature Completion and Robust Deployment)
+### 4. `ver3` (Future Work: Multi-Variable Control)
 
-This iteration integrates all necessary components for a robust field deployment, aligning with typical industrial SBAS requirements for longevity and connectivity. This version specifically focuses on expanding the framework to incorporate the **Temperature control variable**.
+* **Focus:** Expansion of the framework to incorporate the **Temperature control variable** alongside Lux control, achieving **multi-variable control (Lux + Temp)**.
 
-* **Focus:** **System robustness, connectivity and advanced power management** — preparing the framework for real-world, long-term operation without manual intervention, and achieving **multi-variable control (Lux + Temp)**.
+### 5. `ver4` (Future Work: Distributed RL and Scaling)
 
-* **Content Focus:**
-  * **Multi-Variable State Space:** Implementation of a composite state space to handle both Lux and Temperature readings and actuator outputs (e.g., HVAC control).
-  * **Power Management:** Integration of deep-sleep modes and scheduling logic to minimize power draw. This is critical and includes implementing functionality where a **PIR sensor wakes the node to take environmental measurements**, while the more energy-intensive wireless transmission is intentionally handled by a separate, scheduled wake-up module, ensuring high energy efficiency.
-  * **Wireless Communication:** Code for communication modules (for example, Zigbee, Wi-Fi or LoRa) to reliably report system status, receive user-defined setpoints (e.g., "Comfort Mode"), and permit secure over-the-air policy or firmware updates.
-  * **Safety & Fallback Mechanisms:** Implementation of essential safety limits (e.g., maximum PWM output) and non-RL fallback control policies (e.g., a simple timer-based control) to ensure system stability during sensor failure or unexpected environmental events.
-
-* **Progress Highlight:** Represents a **highly optimised framework** suitable for industrial prototyping, combining adaptive RL control with essential low-power and networking capabilities.
-
-### 5. `ver4` (Multi-Agent Coordination and Distributed RL)
-
-This final version focuses on scaling the framework to manage complex, multi-zone building environments using distributed intelligence.
-
-* **Focus:** **Decentralized control, inter-agent communication, and handling coupled environmental dynamics** (e.g., one zone's HVAC system affecting another's temperature).
-
-* **Content Focus:**
-  * **Multi-Agent RL (MARL) Implementation:** Deployment of coordination strategies (e.g., independent learners, cooperative centralized critic) where multiple embedded nodes (agents) interact and influence a shared environment.
-  * **Local Communication Protocol:** Code for high-speed, low-latency inter-node communication (e.g., using protocols like MQTT or custom mesh networks) to share local Q-values, observations, or intentions.
-  * **Fault Tolerance and Self-Healing:** Advanced logic to detect the failure of a neighboring agent and compensate for its absence by temporarily adjusting the local control policy.
-  * **System-Level Energy Optimisation:** Algorithms focused on global objectives, where individual agent rewards are weighted to minimize total building energy consumption rather than just local zone energy.
-
-* **Progress Highlight:** Demonstrates the framework's scalability, enabling the creation of a truly intelligent, distributed building management system capable of optimizing performance across an entire facility.
+* **Focus:** Scaling the framework to manage complex, multi-zone building environments using distributed intelligence and **Decentralized control, inter-agent communication, and handling coupled environmental dynamics**.
 
 ## Technology & Licensing
 
